@@ -102,7 +102,7 @@ Qt load OpenSSL 1.0.x).
 
 ## Credits
 
-Designed and written by Claude (Anthropic) together with smyhu (Karol) for the Nokia N9.
+Designed and written by Claude (Anthropic) together with smyhu for the Nokia N9.
 
 ---
 
