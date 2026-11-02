@@ -1,0 +1,12 @@
+Package: hal2027
+Version: 0.1.7
+Section: user/utilities
+Priority: optional
+Architecture: armel
+Maintainer: smyhu <smyhu@users.noreply.github.com>
+Depends: python (>= 2.6), python-pyside.qtcore, python-pyside.qtgui, python-pyside.qtdeclarative, qt-components, libqt4-network
+Description: HAL 2027 - AI assistant with a HAL-style eye
+ Chat with Gemini, Claude and other AI services using your own API key.
+ Google Translate with speech and dictionary. Answers can be read aloud.
+ Designed and written by Claude (Anthropic) together with smyhu for the Nokia N9.
+XB-Maemo-Display-Name: HAL 2027

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=HAL 2027
+Comment=AI assistant
+Exec=invoker --type=e --single-instance /usr/bin/python /opt/hal2027/main.py
+Icon=/usr/share/icons/hicolor/80x80/apps/hal2027-80.png
+Categories=Utility;
+X-Window-Icon=
+X-HildonDesk-ShowInToolbar=true
+X-Osso-Type=application/x-executable

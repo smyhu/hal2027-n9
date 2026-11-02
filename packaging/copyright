@@ -1,0 +1,43 @@
+HAL 2027 for the Nokia N9
+Designed and written by Claude (Anthropic) together with smyhu for the Nokia N9.
+
+MIT License
+
+Copyright (c) 2026 smyhu
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+The translator language list (translator.js) comes from MeeTranslate
+(github.com/smyhu/meetranslate-n9, MIT).
+Google Translate and its speech are Google services; AI answers come from
+the service you choose, under that service's terms.
+
+Offline speech: eSpeak NG 1.52.0 (https://github.com/espeak-ng/espeak-ng),
+GNU General Public License version 3 or later, see espeak-ng/COPYING.
+Shipped unmodified as a separate program in /opt/hal2027/espeak; built for
+the N9 from the Debian source espeak-ng_1.52.0+dfsg. The ru, cmn and yue
+dictionaries are left out to save space.
+Corresponding source: https://deb.debian.org/debian/pool/main/e/espeak-ng/espeak-ng_1.52.0+dfsg.orig.tar.gz
+(build script build-espeak-arm.sh in the HAL 2027 sources).
+
+Service marks in the conversation list (qml/img/usluga-*.png): monochrome
+icons from LobeHub Icons (@lobehub/icons-static-svg, MIT), recoloured white.
+The marks are trademarks of their owners (Google, Anthropic, OpenAI,
+OpenRouter, Groq, Mistral AI, xAI) and are used only to show which service
+a conversation was held with.
