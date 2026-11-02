@@ -28,7 +28,7 @@ ESPEAK_DATA = os.path.join(APP_DIR, 'espeak', 'espeak-ng-data')
 # both can be changed in Settings
 VOICE_SPEED = 130
 VOICE_PITCH = 25
-VERSION = '0.1.12'
+VERSION = '0.1.13'
 UI_LANGUAGES = ('pl', 'en')
 
 HOME = os.environ.get('HOME') or pwd.getpwuid(os.getuid()).pw_dir
@@ -38,7 +38,8 @@ DATA_DIR = os.path.join(HOME, '.local/share/hal2027')
 CACHE_DIR = os.path.join(HOME, '.cache/hal2027')
 TTS_DIR = os.path.join(CACHE_DIR, 'tts')
 DOCS_DIR = os.environ.get('HAL2027_DOCS', os.path.join(HOME, 'MyDocs/Documents/HAL2027'))
-KEY_FILE_NAMES = ('hal2027-klucze.txt', 'hal2027-keys.txt')
+# hal2027-klucze.txt: name used up to 0.1.12, still read
+KEY_FILE_NAMES = ('hal2027-keys.txt', 'hal2027-klucze.txt')
 KEY_FILE_DIRS = (os.path.join(HOME, 'MyDocs'), HOME)
 
 ANTHROPIC_VERSION = '2026-10-21'
@@ -52,7 +53,7 @@ RETRY_STATUS = (404, 429, 500, 502, 503, 504)
 # kind gemini = audio sent to a Gemini model; kind whisper = the
 # OpenAI-style /audio/transcriptions endpoint (Groq, OpenAI, Mistral...).
 # 'key' names the service whose API key is used (default: id), 'base' the
-# server (default: that service's base). Changed in uslugi.json.
+# server (default: that service's base). Changed in services.json.
 SPEECH_TO_TEXT = [
     {'id': 'gemini', 'kind': 'gemini', 'models': ['gemini-flash-lite-latest', 'gemini-3.5-flash']},
     {'id': 'groq', 'kind': 'whisper', 'model': 'whisper-large-v3-turbo'},
@@ -90,13 +91,14 @@ PROVIDERS = [
 
 
 def load_services():
-    """Services can be changed without a new package: /opt/hal2027/uslugi.json
-    (shipped) and the user's MyDocs/hal2027-uslugi.json, which changes chosen
+    """Services can be changed without a new package: /opt/hal2027/services.json
+    (shipped) and the user's MyDocs/hal2027-services.json, which changes chosen
     fields of a service (matched by id) or adds new ones. Each kind (gemini,
     anthropic, openai) is one way of talking to a server; a new service of one
     of these kinds needs only an entry in the file."""
     global PROVIDERS, ANTHROPIC_VERSION, GEMINI_FALLBACK, SPEECH_TO_TEXT, LISTEN_MAX_SECONDS
-    for path in (os.path.join(APP_DIR, 'uslugi.json'),
+    # hal2027-uslugi.json: name used up to 0.1.12, still read
+    for path in (os.path.join(APP_DIR, 'services.json'),
                  os.path.join(HOME, 'MyDocs', 'hal2027-uslugi.json'),
                  os.path.join(HOME, 'MyDocs', 'hal2027-services.json')):
         if not os.path.exists(path):
@@ -371,8 +373,8 @@ class Store(QObject):
 
     @Slot(result=unicode)
     def importKeys(self):
-        """Reads 'service=key' lines from MyDocs/hal2027-klucze.txt (or
-        hal2027-keys.txt), stores them and deletes the file. Returns the
+        """Reads 'service=key' lines from MyDocs/hal2027-keys.txt (or the
+        older name hal2027-klucze.txt), stores them and deletes the file. Returns the
         list of imported services as JSON, or {"error": ...}."""
         for d in KEY_FILE_DIRS:
             for n in KEY_FILE_NAMES:
@@ -481,7 +483,7 @@ class History(QObject):
             return u''
         try:
             ensure_dir(DOCS_DIR)
-            name = time.strftime('rozmowa-%Y%m%d-%H%M%S.txt', time.localtime(row[1]))
+            name = time.strftime('conversation-%Y%m%d-%H%M%S.txt', time.localtime(row[1]))
             path = os.path.join(DOCS_DIR, name)
             f = open(path, 'w')
             try:
@@ -992,7 +994,7 @@ class Listener(QObject):
         self.proc = None
         self.job = 0
         self.events = []
-        self.wav = os.path.join(CACHE_DIR, 'mowa.wav')
+        self.wav = os.path.join(CACHE_DIR, 'speech.wav')
 
     def push(self, ev):
         self.events.append(ev)
@@ -1198,7 +1200,7 @@ class Listener(QObject):
         for k, v in fields:
             parts.append('--%s\r\nContent-Disposition: form-data; name="%s"\r\n\r\n%s\r\n'
                          % (boundary, k, v.encode('utf-8') if isinstance(v, unicode) else v))
-        parts.append('--%s\r\nContent-Disposition: form-data; name="file"; filename="mowa.wav"\r\n'
+        parts.append('--%s\r\nContent-Disposition: form-data; name="file"; filename="speech.wav"\r\n'
                      'Content-Type: audio/wav\r\n\r\n' % boundary)
         path = os.path.join(CACHE_DIR, 'stt.form')
         f = open(path, 'wb')

@@ -54,7 +54,7 @@ Page {
     }
     Component.onCompleted: reload()
 
-    Image { source: "img/tlo.png"; y: -36; smooth: false }
+    Image { source: "img/background.png"; y: -36; smooth: false }
     ListModel { id: model }
     Header { id: header; title: S.t(uiLang, "history") }
 
@@ -193,7 +193,7 @@ Page {
                 height: 64
                 anchors { right: parent.right; rightMargin: 16; verticalCenter: parent.verticalCenter }
                 smooth: true
-                source: "img/usluga-" + model.pid + ".png"
+                source: "img/service-" + model.pid + ".png"
                 // a service added in the config file has no mark of its own
                 onStatusChanged: if (status == Image.Error) source = "image://theme/icon-m-toolbar-new-chat-white"
             }

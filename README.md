@@ -17,7 +17,7 @@ Designed and written by Claude (Anthropic) together with smyhu.
   voice and a red arc in the ring counts the time (up to 30 s). Tap anywhere to finish. The
   speech is written into the field, you check it and press Enter. Speech to text goes through a
   chain of services (Gemini, then Groq Whisper, OpenAI, Mistral), skipping those without a key;
-  the order is set in `uslugi.json`.
+  the order is set in `services.json`.
 - **The whole conversation on the main screen**, below the eye, in message bubbles. The question
   field grows with the text and sits halfway between the eye and the keyboard. Long press a
   bubble for Copy, Read aloud and Clear conversation.
@@ -34,11 +34,11 @@ Designed and written by Claude (Anthropic) together with smyhu.
 
 ## Install
 
-Copy `dist/hal2027_0.1.12_armel.deb` to `/home/developer` on the phone (`/tmp` on the N9
+Copy `dist/hal2027_0.1.13_armel.deb` to `/home/developer` on the phone (`/tmp` on the N9
 has only 4 MB), then as root (developer mode):
 
 ```
-aegis-dpkg -i /home/developer/hal2027_0.1.12_armel.deb
+aegis-dpkg -i /home/developer/hal2027_0.1.13_armel.deb
 ```
 
 Requirements: Python 2.6, PySide and Qt Components, all present on a standard PR1.3 phone.
@@ -47,8 +47,8 @@ The AI services use HTTPS with TLS 1.2, so the phone needs a TLS 1.2 capable QtN
 
 ## API keys
 
-Type the key in Settings, or put a text file `hal2027-klucze.txt` (or `hal2027-keys.txt`) in
-MyDocs (the folder Windows shows when the phone is connected over USB), one line per service:
+Type the key in Settings, or put a text file `hal2027-keys.txt` in MyDocs (the folder Windows
+shows when the phone is connected over USB), one line per service:
 
 ```
 gemini=YOUR_KEY
@@ -57,21 +57,22 @@ openrouter=YOUR_KEY
 ```
 
 Service names: `gemini`, `claude`, `openai`, `openrouter`, `groq`, `mistral`, `xai`.
-HAL imports the keys on start and deletes the file. Keys stay on the phone only.
+Then tap Settings → Import keys from a file. HAL stores the keys and deletes the file.
+Keys stay on the phone only.
 
 ## Changing services without a new package
 
-Servers, models and headers are in `/opt/hal2027/uslugi.json`. To change them, put
-`hal2027-uslugi.json` (or `hal2027-services.json`) in MyDocs with only the fields you change,
+Servers, models and headers are in `/opt/hal2027/services.json`. To change them, put
+`hal2027-services.json` in MyDocs with only the fields you change,
 matched by `id`. New services of kind `gemini`, `anthropic` or `openai` (OpenAI-compatible)
-can be added the same way. An example is in `packaging/doc/hal2027-uslugi.przyklad.json`.
+can be added the same way. An example is in `packaging/doc/hal2027-services.example.json`.
 
 ## Layout
 
 | Part | What it does |
 |---|---|
 | `src/main.py` | PySide launcher: chat requests, history, keys, speech, settings |
-| `src/uslugi.json` | the list of AI services (servers, models, headers) |
+| `src/services.json` | the list of AI services (servers, models, headers) |
 | `src/qml/` | UI (Harmattan Qt Components), translations (`strings.js`), service marks |
 | `helper/` | `hal2027-fetch`, a small C++/Qt program that does all HTTP(S) requests, and `hal2027-rec`, a small C program that records speech through PulseAudio; their sources and cross-build scripts |
 | `espeak/` | eSpeak NG 1.52.0 built for the N9, its data and the cross-build script |
@@ -124,8 +125,8 @@ Zaprojektowany i napisany przez Claude (Anthropic) wspólnie ze smyhu dla Nokii 
 - **Czytanie na głos:** głos Google przez Wi-Fi albo offline (eSpeak NG), z tempem i wysokością.
 - **Tłumacz Google**, pięć kolorów oka, interfejs po polsku i angielsku.
 
-Instalacja: skopiuj `dist/hal2027_0.1.12_armel.deb` do `/home/developer` w telefonie i jako
-root (tryb dewelopera) uruchom `aegis-dpkg -i /home/developer/hal2027_0.1.12_armel.deb`.
+Instalacja: skopiuj `dist/hal2027_0.1.13_armel.deb` do `/home/developer` w telefonie i jako
+root (tryb dewelopera) uruchom `aegis-dpkg -i /home/developer/hal2027_0.1.13_armel.deb`.
 
-Klucze: wpisz w Ustawieniach albo zapisz plik `hal2027-klucze.txt` w MyDocs (linie
-`gemini=KLUCZ`); HAL wczyta go przy starcie i usunie.
+Klucze: wpisz w Ustawieniach albo zapisz plik `hal2027-keys.txt` w MyDocs (linie
+`gemini=KLUCZ`) i dotknij Ustawienia → Wczytaj klucze z pliku; HAL zapisze klucze i usunie plik.

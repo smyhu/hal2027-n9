@@ -276,7 +276,7 @@ Page {
     }
 
     Image {
-        source: "img/tlo.png"
+        source: "img/background.png"
         y: -36
         smooth: false
     }
@@ -408,7 +408,7 @@ Page {
             Image {
                 anchors.centerIn: parent
                 visible: page.listening != "stt"
-                source: page.busy && page.listening == "" ? "image://theme/icon-m-toolbar-stop-white" : "img/mikrofon.png"
+                source: page.busy && page.listening == "" ? "image://theme/icon-m-toolbar-stop-white" : "img/microphone.png"
                 opacity: micArea.pressed ? 0.5 : 0.9
                 scale: page.listening == "rec" ? 1.0 + 0.35 * eye.inputLevel : 1.0
                 Behavior on scale { NumberAnimation { duration: 90 } }
@@ -501,8 +501,11 @@ Page {
     QueryDialog {
         id: aboutDialog
         titleText: "HAL 2027 " + appVersion
-        message: S.t(uiLang, "aboutText") + "\n\n" + S.t(uiLang, "credit") + "\n\nMIT · github.com/smyhu/hal2027-n9"
+        message: S.t(uiLang, "aboutText") + "<br><br>" + S.t(uiLang, "credit") +
+                 "<br><br>MIT · <a href=\"https://github.com/smyhu/hal2027-n9\" style=\"color:" + appWindow.accent +
+                 "; text-decoration:underline\">github.com/smyhu/hal2027-n9</a>"
         acceptButtonText: S.t(uiLang, "close")
+        onLinkActivated: Qt.openUrlExternally(link)
     }
 
     tools: ToolBarLayout {

@@ -46,7 +46,7 @@ Page {
         }
     }
 
-    Image { source: "img/tlo.png"; y: -36; smooth: false }
+    Image { source: "img/background.png"; y: -36; smooth: false }
     Header {
         id: header
         title: S.t(uiLang, "settings") + " · " + (tabs.currentTab == aiTab ? "AI" : (tabs.currentTab == uiTab ? S.t(uiLang, "tabLook") : S.t(uiLang, "voiceEngine")))
@@ -267,8 +267,8 @@ Page {
                                 anchors.centerIn: parent
                                 width: 60; height: 60
                                 smooth: true
-                                source: "img/poswiata-" + modelData + ".png"
-                                Image { anchors.fill: parent; smooth: true; source: "img/rdzen-" + modelData + ".png" }
+                                source: "img/glow-" + modelData + ".png"
+                                Image { anchors.fill: parent; smooth: true; source: "img/core-" + modelData + ".png" }
                             }
                             MouseArea {
                                 anchors.fill: parent

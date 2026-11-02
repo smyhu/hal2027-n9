@@ -2,7 +2,7 @@
 # ring, red glow, core and reflections, cut to a circle and scaled to 78 px.
 from PIL import Image, ImageDraw
 base = Image.new('RGBA', (440, 440), (0, 0, 0, 0))
-for n in ['pierscien.png', 'poswiata-red.png', 'rdzen-red.png', 'odblaski.png']:
+for n in ['ring.png', 'glow-red.png', 'core-red.png', 'reflections.png']:
     base = Image.alpha_composite(base, Image.open(n).convert('RGBA').resize((440, 440)))
 S = 4
 mask = Image.new('L', (440 * S, 440 * S), 0)

@@ -58,7 +58,7 @@ var texts = {
     "keySave":      { "pl": "Zapisz klucz", "en": "Save key" },
     "keyDelete":    { "pl": "Usuń klucz", "en": "Delete key" },
     "keyImport":    { "pl": "Wczytaj klucze z pliku", "en": "Import keys from a file" },
-    "keyImportHelp":{ "pl": "Plik MyDocs/hal2027-klucze.txt, w każdej linii: usługa=klucz (np. gemini=AIza…). Po wczytaniu plik jest usuwany.",
+    "keyImportHelp":{ "pl": "Plik MyDocs/hal2027-keys.txt, w każdej linii: usługa=klucz (np. gemini=AIza…). Po wczytaniu plik jest usuwany.",
                       "en": "File MyDocs/hal2027-keys.txt, one line per service: service=key (e.g. gemini=AIza…). The file is deleted after import." },
     "keyImported":  { "pl": "Wczytano klucze: %1", "en": "Imported keys: %1" },
     "keyNoFile":    { "pl": "Nie znaleziono pliku z kluczami w MyDocs", "en": "No key file found in MyDocs" },

@@ -57,20 +57,20 @@ Item {
 
     Image {
         anchors.fill: parent
-        source: "img/pierscien.png"
+        source: "img/ring.png"
         smooth: true
     }
     Image {
         id: glow
         anchors.fill: parent
-        source: "img/poswiata-" + eye.color + ".png"
+        source: "img/glow-" + eye.color + ".png"
         smooth: true
         opacity: 0.25 + 0.75 * eye.level
         scale: 0.88 + 0.14 * eye.level
     }
     Image {
         anchors.fill: parent
-        source: "img/rdzen-" + eye.color + ".png"
+        source: "img/core-" + eye.color + ".png"
         smooth: true
         opacity: 0.55 + 0.45 * eye.level
         scale: 0.95 + 0.1 * eye.level
@@ -90,7 +90,7 @@ Item {
                 x: -220
                 width: 440
                 height: 440
-                source: "img/postep-" + eye.color + ".png"
+                source: "img/progress-" + eye.color + ".png"
                 smooth: true
                 rotation: -180 + 360 * Math.min(eye.progress, 0.5)
             }
@@ -102,7 +102,7 @@ Item {
             Image {
                 width: 440
                 height: 440
-                source: "img/postep-" + eye.color + ".png"
+                source: "img/progress-" + eye.color + ".png"
                 smooth: true
                 rotation: 360 * Math.max(eye.progress - 0.5, 0)
             }
@@ -111,7 +111,7 @@ Item {
 
     Image {
         anchors.fill: parent
-        source: "img/odblaski.png"
+        source: "img/reflections.png"
         smooth: true
     }
 

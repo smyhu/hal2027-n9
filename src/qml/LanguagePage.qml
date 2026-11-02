@@ -33,7 +33,7 @@ Page {
 
     ListModel { id: langModel }
 
-    Image { source: "img/tlo.png"; y: -36; smooth: false }
+    Image { source: "img/background.png"; y: -36; smooth: false }
     Header { id: titleBar; title: S.t(uiLang, isSource ? "from" : "to") }
 
     TextField {

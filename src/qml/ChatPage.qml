@@ -20,7 +20,7 @@ Page {
     }
     Component.onCompleted: reload()
 
-    Image { source: "img/tlo.png"; y: -36; smooth: false }
+    Image { source: "img/background.png"; y: -36; smooth: false }
 
     ListModel { id: model }
 

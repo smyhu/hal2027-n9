@@ -9,7 +9,7 @@ A=$P/opt/hal2027
 D=$P/usr/share/doc/hal2027
 mkdir -p $P/DEBIAN $A/espeak $P/usr/share/applications $D $P/usr/share/icons/hicolor/80x80/apps
 cp packaging/control $P/DEBIAN/
-cp src/main.py src/uslugi.json helper/hal2027-fetch helper/hal2027-rec $A/
+cp src/main.py src/services.json helper/hal2027-fetch helper/hal2027-rec $A/
 cp -r src/qml $A/
 cp espeak/espeak-ng $A/espeak/
 cp -r espeak/espeak-ng-data $A/espeak/

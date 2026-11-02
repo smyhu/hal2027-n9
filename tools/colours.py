@@ -21,17 +21,17 @@ noise=rng.normal(0,2.5,(S,S,1)); anoise=rng.normal(0,0.010,(S,S))*(g>0)
 for name,(gc,hc,dc) in COLS.items():
     gcol=np.array(gc,float); hot=np.array(hc,float); dcol=np.array(dc,float)
     col=gcol+(np.array([255,255,255])-gcol)*0.15*(g**6)[...,None]
-    save(col+noise,(glow_a+anoise)*(r<RI),'poswiata-%s.png'%name)
+    save(col+noise,(glow_a+anoise)*(r<RI),'glow-%s.png'%name)
     k=(c**1.5)[...,None]
     rgb=gcol*(1-k)+hot*k; rgb=rgb*(1-dot[...,None])+dcol*dot[...,None]
-    save(rgb,np.maximum(core_a,dot),'rdzen-%s.png'%name)
+    save(rgb,np.maximum(core_a,dot),'core-%s.png'%name)
     pa=aa(RI-2-r)*aa(r-(RI-12))*(dx>=0)
     pc=np.clip(gcol*0.95,0,255)
-    save(np.ones((S,S,3))*pc,pa,'postep-%s.png'%name)
-base=Image.open('pierscien.png'); ref=Image.open('odblaski.png')
+    save(np.ones((S,S,3))*pc,pa,'progress-%s.png'%name)
+base=Image.open('ring.png'); ref=Image.open('reflections.png')
 row=Image.new('RGBA',(5*220,220))
 for i,n in enumerate(COLS):
     b=Image.new('RGBA',(S,S),(0,0,0,255))
-    for l in [base,Image.open('poswiata-%s.png'%n),Image.open('rdzen-%s.png'%n),ref]: b=Image.alpha_composite(b,l)
+    for l in [base,Image.open('glow-%s.png'%n),Image.open('core-%s.png'%n),ref]: b=Image.alpha_composite(b,l)
     row.paste(b.resize((220,220),Image.LANCZOS),(i*220,0))
-row.save('kolory-podglad.png')
+row.save('colours-preview.png')

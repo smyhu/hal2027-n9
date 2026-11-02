@@ -18,4 +18,4 @@ for yy in range(H):
             if xx>0: out[yy+1,xx-1]+=e*3/16
             out[yy+1,xx]+=e*5/16
             if xx+1<W: out[yy+1,xx+1]+=e*1/16
-Image.fromarray(np.clip(out,0,255).round().astype(np.uint8),'RGB').save('tlo.png')
+Image.fromarray(np.clip(out,0,255).round().astype(np.uint8),'RGB').save('background.png')

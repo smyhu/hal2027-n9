@@ -3,7 +3,7 @@
 import io, re, sys, cairosvg
 from PIL import Image
 SRC = 'lobe/package/icons/'  # unpacked @lobehub/icons-static-svg
-OUT = 'uslugi/'
+OUT = 'service-marks/'
 ICONS = {'gemini': 'gemini', 'claude': 'claude', 'claude-anthropic': 'anthropic', 'openai': 'openai',
          'openrouter': 'openrouter', 'groq': 'groq', 'mistral': 'mistral', 'xai': 'xai'}
 for name, src in ICONS.items():
@@ -14,5 +14,5 @@ for name, src in ICONS.items():
     mark = Image.open(io.BytesIO(png)).convert('RGBA').resize((56, 56), Image.LANCZOS)
     im = Image.new('RGBA', (80, 80), (0, 0, 0, 0))
     im.paste(mark, (12, 12), mark)
-    im.save(OUT + 'usluga-%s.png' % name)
+    im.save(OUT + 'service-%s.png' % name)
     print(name)
