@@ -13,10 +13,17 @@ Designed and written by Claude (Anthropic) together with smyhu.
   can be used on a free tier; the others need a paid plan.
 - **Gemini fallback:** when the chosen Gemini model is overloaded, HAL moves to the next model
   in the chain and says so in a banner.
-- **The whole conversation on the main screen**, below the eye, in message bubbles. Long press
-  a bubble for Copy, Read aloud and Clear conversation.
+- **Talking to HAL:** tap the microphone in the question field and speak; the eye follows your
+  voice and a red arc in the ring counts the time (up to 30 s). Tap anywhere to finish. The
+  speech is written into the field, you check it and press Enter. Speech to text goes through a
+  chain of services (Gemini, then Groq Whisper, OpenAI, Mistral), skipping those without a key;
+  the order is set in `uslugi.json`.
+- **The whole conversation on the main screen**, below the eye, in message bubbles. The question
+  field grows with the text and sits halfway between the eye and the keyboard. Long press a
+  bubble for Copy, Read aloud and Clear conversation.
 - **Conversations:** every session is saved and listed like in a messenger, with date, time and
-  the service's mark.
+  the service's mark. Pull the list down at its top to search, the native MeeGo way: `*` stands
+  for any text and `?` for one character; letter case and accents are ignored.
 - **Reading aloud:** Google voice over Wi-Fi, or **offline** with eSpeak NG (speed and pitch
   adjustable). Auto mode picks one by itself. Auto-reading pauses when the battery is low;
   a mute button is on the toolbar.
@@ -27,11 +34,11 @@ Designed and written by Claude (Anthropic) together with smyhu.
 
 ## Install
 
-Copy `dist/hal2027_0.1.7_armel.deb` to `/home/developer` on the phone (`/tmp` on the N9
+Copy `dist/hal2027_0.1.12_armel.deb` to `/home/developer` on the phone (`/tmp` on the N9
 has only 4 MB), then as root (developer mode):
 
 ```
-aegis-dpkg -i /home/developer/hal2027_0.1.7_armel.deb
+aegis-dpkg -i /home/developer/hal2027_0.1.12_armel.deb
 ```
 
 Requirements: Python 2.6, PySide and Qt Components, all present on a standard PR1.3 phone.
@@ -66,7 +73,7 @@ can be added the same way. An example is in `packaging/doc/hal2027-uslugi.przykl
 | `src/main.py` | PySide launcher: chat requests, history, keys, speech, settings |
 | `src/uslugi.json` | the list of AI services (servers, models, headers) |
 | `src/qml/` | UI (Harmattan Qt Components), translations (`strings.js`), service marks |
-| `helper/` | `hal2027-fetch`, a small C++/Qt program that does all HTTP(S) requests, its source and cross-build script |
+| `helper/` | `hal2027-fetch`, a small C++/Qt program that does all HTTP(S) requests, and `hal2027-rec`, a small C program that records speech through PulseAudio; their sources and cross-build scripts |
 | `espeak/` | eSpeak NG 1.52.0 built for the N9, its data and the cross-build script |
 | `packaging/` | Debian control file, launcher entry, copyright, docs |
 | `tools/` | Python scripts that drew the eye, its colours, the icon and the service marks |
@@ -107,14 +114,18 @@ Zaprojektowany i napisany przez Claude (Anthropic) wspólnie ze smyhu dla Nokii 
 
 - **Usługi AI:** Google Gemini, Anthropic Claude, OpenAI, OpenRouter, Groq, Mistral, xAI Grok.
   Darmowo: Gemini, OpenRouter (modele `:free`) i Groq; pozostałe wymagają płatnego planu.
+- **Mówienie do HAL-a:** dotknij mikrofonu w polu pytania i mów; dotknięcie ekranu kończy.
+  Tekst trafia do pola, sprawdzasz i wciskasz Enter. Rozpoznawanie łańcuchem usług (Gemini,
+  Groq, OpenAI, Mistral).
 - **Cała rozmowa na ekranie głównym** pod okiem; przytrzymanie dymka: Kopiuj, Czytaj na głos,
   Wyczyść rozmowę.
-- **Rozmowy:** lista wszystkich sesji jak w komunikatorze, z datą, godziną i znakiem usługi.
+- **Rozmowy:** lista wszystkich sesji jak w komunikatorze, z datą, godziną i znakiem usługi;
+  pociągnięcie listy w dół otwiera wyszukiwanie (`*` i `?`).
 - **Czytanie na głos:** głos Google przez Wi-Fi albo offline (eSpeak NG), z tempem i wysokością.
 - **Tłumacz Google**, pięć kolorów oka, interfejs po polsku i angielsku.
 
-Instalacja: skopiuj `dist/hal2027_0.1.7_armel.deb` do `/home/developer` w telefonie i jako
-root (tryb dewelopera) uruchom `aegis-dpkg -i /home/developer/hal2027_0.1.7_armel.deb`.
+Instalacja: skopiuj `dist/hal2027_0.1.12_armel.deb` do `/home/developer` w telefonie i jako
+root (tryb dewelopera) uruchom `aegis-dpkg -i /home/developer/hal2027_0.1.12_armel.deb`.
 
 Klucze: wpisz w Ustawieniach albo zapisz plik `hal2027-klucze.txt` w MyDocs (linie
 `gemini=KLUCZ`); HAL wczyta go przy starcie i usunie.

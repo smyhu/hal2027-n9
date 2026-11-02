@@ -19,6 +19,11 @@ Page {
     // under it, so the keyboard never covers what is being typed
     property bool typing: false
     property bool small: talking || typing
+    property string listening: ""       // "", "rec" (recording), "stt" (writing it down)
+    // lowest point free for the question field: the page itself already
+    // shrinks above the open keyboard (Window.qml heightDelta), so its bottom
+    // is the keyboard top; without the keyboard it is the toolbar top
+    property real bottomLimit: height
 
     function send() {
         var text = input.text;
@@ -62,7 +67,85 @@ Page {
     }
     property bool follow: true
 
+    // microphone: first tap records, second tap ends and the speech is
+    // written into the field (check it, then ENTER sends)
+    function listen() {
+        if (listening == "rec") {
+            finishRecording();
+            return;
+        }
+        if (listening == "stt") {
+            endListening();
+            return;
+        }
+        if (!net.online()) {
+            appWindow.showBanner(S.t(uiLang, "noInternet"));
+            return;
+        }
+        appWindow.stopSpeaking();
+        listening = "rec";
+        eye.inputLevel = 0;
+        eye.mode = "listening";
+        listener.record(uiLang);
+    }
+    // show at once that the recording is over, even before the recorder ends
+    function finishRecording() {
+        listener.finish();
+        listening = "stt";
+        eye.inputLevel = 0;
+        eye.mode = "thinking";
+        rewind.restart();
+    }
+    function endListening() {
+        listener.drop();
+        listening = "";
+        rewind.restart();
+        eye.inputLevel = 0;
+        if (!busy)
+            eye.mode = "idle";
+    }
+    function handleListener(ev) {
+        if (ev.type == "level") {
+            if (listening != "rec")
+                return;
+            eye.inputLevel = Math.min(1, ev.value * 1.6);
+            eye.progress = Math.min(1, ev.seconds / listener.maxSeconds());
+        } else if (ev.type == "transcribing") {
+            listening = "stt";
+            eye.inputLevel = 0;
+            eye.mode = "thinking";
+            rewind.restart();
+        } else if (ev.type == "fallback") {
+            appWindow.showBanner(S.t(uiLang, "sttFallback", ev.service));
+        } else if (ev.type == "text") {
+            listening = "";
+            eye.mode = "idle";
+            input.text = input.text.replace(/\s+$/, "") + (input.text.replace(/\s/g, "").length ? " " : "") + ev.text;
+            input.forceActiveFocus();
+            input.cursorPosition = input.text.length;
+            input.platformOpenSoftwareInputPanel();
+        } else if (ev.type == "error") {
+            var key = { "mic": "micError", "nokey": "sttNoKey", "short": "sttShort", "empty": "sttEmpty" }[ev.code] || "sttError";
+            appWindow.showBanner(S.t(uiLang, key, ev.message || ""));
+            listening = "";
+            rewind.restart();
+            eye.inputLevel = 0;
+            if (!busy)
+                eye.mode = "idle";
+        }
+    }
+    Connections {
+        target: listener
+        onNews: {
+            var r;
+            while ((r = listener.take()) != "")
+                page.handleListener(JSON.parse(r));
+        }
+    }
+
     function stopAll() {
+        if (listening != "")
+            endListening();
         if (busy && msgs.count && msgs.get(msgs.count - 1).role == "assistant") {
             if (answer == "")
                 msgs.remove(msgs.count - 1);
@@ -208,6 +291,10 @@ Page {
         Behavior on size { NumberAnimation { duration: 380; easing.type: Easing.OutCubic } }
         Behavior on y { NumberAnimation { duration: 380; easing.type: Easing.OutCubic } }
         onClicked: {
+            if (page.listening == "rec") {
+                page.finishRecording();
+                return;
+            }
             if (page.typing) {
                 page.typing = false;
                 input.platformCloseSoftwareInputPanel();
@@ -262,29 +349,91 @@ Page {
     Item {
         id: inputRow
         anchors { left: parent.left; right: parent.right; leftMargin: 16; rightMargin: 16 }
-        height: 56
-        y: page.typing ? eye.y + eye.size + 16 : (page.talking ? page.height - height - 10 : eye.y + eye.size + 24)
+        // grows with the text (several lines of dictation fit)
+        height: Math.max(56, input.height + 4)
+        // centred between the eye and the keyboard top (or the screen bottom);
+        // with a conversation on screen (no keyboard) it sits at the bottom
+        property real eyeBottom: eye.y + eye.size
+        y: page.talking && !page.typing ? page.bottomLimit - height - 10
+           : Math.max(eyeBottom + 12, eyeBottom + (page.bottomLimit - eyeBottom - height) / 2)
         Behavior on y { NumberAnimation { duration: 380; easing.type: Easing.OutCubic } }
+        Behavior on height { NumberAnimation { duration: 150 } }
 
-        TextField {
+        // one dark frame: text on the left, microphone (or stop) on the right
+        Rectangle {
+            id: inputFrame
+            anchors.fill: parent
+            radius: 12
+            color: "#0c0c0c"
+            border.width: 1
+            border.color: input.activeFocus || page.listening != "" ? Qt.lighter(appWindow.tintBorder, 1.6) : appWindow.tintBorder
+        }
+        TextArea {
             id: input
-            anchors { left: parent.left; right: sendButton.left; rightMargin: 8; verticalCenter: parent.verticalCenter }
-            placeholderText: S.t(uiLang, "ask")
+            anchors { left: parent.left; right: micButton.left; leftMargin: 4; verticalCenter: parent.verticalCenter }
+            wrapMode: TextEdit.Wrap
+            placeholderText: page.listening == "rec" ? S.t(uiLang, "listening") :
+                             page.listening == "stt" ? S.t(uiLang, "transcribing") : S.t(uiLang, "ask")
+            platformStyle: TextAreaStyle {
+                background: ""; backgroundSelected: ""; backgroundDisabled: ""; backgroundError: ""
+                textColor: "#ffffff"
+                paddingLeft: 12
+            }
             platformSipAttributes: SipAttributes {
                 actionKeyLabel: S.t(uiLang, "send")
                 actionKeyEnabled: input.text.length > 0
             }
-            Keys.onReturnPressed: page.send()
+            // ENTER / "Send" on the keyboard: the text area's inner editor takes
+            // the key itself and adds a new line, so a new line means "send"
+            onTextChanged: {
+                if (text.indexOf("\n") >= 0)
+                    enterTimer.restart();     // not inside the editor's own change
+            }
+            Timer {
+                id: enterTimer
+                interval: 0
+                onTriggered: {
+                    input.text = input.text.replace(/\n/g, " ").replace(/\s+$/, "");
+                    page.send();
+                }
+            }
             onActiveFocusChanged: if (activeFocus) page.typing = true
+            // the stock text area only ever grows; follow the text both ways
+            onImplicitHeightChanged: { __originalHeight = 0; height = implicitHeight; }
         }
-        Button {
-            id: sendButton
-            width: 64
-            height: 52
-            anchors { right: parent.right; verticalCenter: parent.verticalCenter }
-            iconSource: page.busy ? "image://theme/icon-m-toolbar-stop-white" : "image://theme/icon-m-toolbar-send-chat-white"
-            onClicked: page.busy ? page.stopAll() : page.send()
+        Item {
+            id: micButton
+            width: 60
+            anchors { right: parent.right; top: parent.top; bottom: parent.bottom }
+            Image {
+                anchors.centerIn: parent
+                visible: page.listening != "stt"
+                source: page.busy && page.listening == "" ? "image://theme/icon-m-toolbar-stop-white" : "img/mikrofon.png"
+                opacity: micArea.pressed ? 0.5 : 0.9
+                scale: page.listening == "rec" ? 1.0 + 0.35 * eye.inputLevel : 1.0
+                Behavior on scale { NumberAnimation { duration: 90 } }
+            }
+            BusyIndicator {
+                anchors.centerIn: parent
+                visible: page.listening == "stt"
+                running: visible
+                platformStyle: BusyIndicatorStyle { inverted: true }
+            }
+            MouseArea {
+                id: micArea
+                anchors.fill: parent
+                onClicked: page.busy && page.listening == "" ? page.stopAll() : page.listen()
+            }
         }
+    }
+
+    // while recording, a tap anywhere ends it ("tap to finish")
+    MouseArea {
+        anchors.fill: parent
+        z: 50
+        enabled: page.listening == "rec"
+        visible: enabled
+        onClicked: page.finishRecording()
     }
 
     Label {

@@ -9,23 +9,26 @@ import os
 import sys
 import pwd
 import json
+import re
+import unicodedata
 import time
 import sqlite3
 import subprocess
 
-from PySide.QtCore import QObject, QUrl, QProcess, QSettings, Signal, Slot
+from PySide.QtCore import QObject, QUrl, QProcess, QSettings, QTimer, Signal, Slot
 from PySide.QtGui import QApplication
 from PySide.QtDeclarative import QDeclarativeView
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 FETCH = os.path.join(APP_DIR, 'hal2027-fetch')
 ESPEAK = os.path.join(APP_DIR, 'espeak', 'espeak-ng')
+REC = os.environ.get('HAL2027_REC', os.path.join(APP_DIR, 'hal2027-rec'))
 ESPEAK_DATA = os.path.join(APP_DIR, 'espeak', 'espeak-ng-data')
 # calm, low offline voice by default (espeak-ng defaults: speed 175, pitch 50);
 # both can be changed in Settings
 VOICE_SPEED = 130
 VOICE_PITCH = 25
-VERSION = '0.1.7'
+VERSION = '0.1.12'
 UI_LANGUAGES = ('pl', 'en')
 
 HOME = os.environ.get('HOME') or pwd.getpwuid(os.getuid()).pw_dir
@@ -44,6 +47,19 @@ ANTHROPIC_VERSION = '2026-10-21'
 # newest models often hang or return 503 under high demand).
 GEMINI_FALLBACK = ['gemini-3.5-flash', 'gemini-flash-lite-latest']
 RETRY_STATUS = (404, 429, 500, 502, 503, 504)
+
+# Speech to text: tried in this order, skipping services without a key.
+# kind gemini = audio sent to a Gemini model; kind whisper = the
+# OpenAI-style /audio/transcriptions endpoint (Groq, OpenAI, Mistral...).
+# 'key' names the service whose API key is used (default: id), 'base' the
+# server (default: that service's base). Changed in uslugi.json.
+SPEECH_TO_TEXT = [
+    {'id': 'gemini', 'kind': 'gemini', 'models': ['gemini-flash-lite-latest', 'gemini-3.5-flash']},
+    {'id': 'groq', 'kind': 'whisper', 'model': 'whisper-large-v3-turbo'},
+    {'id': 'openai', 'kind': 'whisper', 'model': 'gpt-4o-mini-transcribe'},
+    {'id': 'mistral', 'kind': 'whisper', 'model': 'voxtral-mini-latest'},
+]
+LISTEN_MAX_SECONDS = 30
 
 # Services. kind: gemini, anthropic or openai (OpenAI-compatible chat API).
 PROVIDERS = [
@@ -79,7 +95,7 @@ def load_services():
     fields of a service (matched by id) or adds new ones. Each kind (gemini,
     anthropic, openai) is one way of talking to a server; a new service of one
     of these kinds needs only an entry in the file."""
-    global PROVIDERS, ANTHROPIC_VERSION, GEMINI_FALLBACK
+    global PROVIDERS, ANTHROPIC_VERSION, GEMINI_FALLBACK, SPEECH_TO_TEXT, LISTEN_MAX_SECONDS
     for path in (os.path.join(APP_DIR, 'uslugi.json'),
                  os.path.join(HOME, 'MyDocs', 'hal2027-uslugi.json'),
                  os.path.join(HOME, 'MyDocs', 'hal2027-services.json')):
@@ -92,6 +108,14 @@ def load_services():
             continue
         ANTHROPIC_VERSION = str(conf.get('anthropic_version', ANTHROPIC_VERSION))
         GEMINI_FALLBACK = [str(m) for m in conf.get('gemini_fallback', GEMINI_FALLBACK)]
+        stt = conf.get('speech_to_text')
+        if isinstance(stt, list):
+            SPEECH_TO_TEXT = [e for e in stt if isinstance(e, dict) and e.get('id') and
+                              e.get('kind') in ('gemini', 'whisper')]
+        try:
+            LISTEN_MAX_SECONDS = max(5, min(120, int(conf.get('listen_max_seconds', LISTEN_MAX_SECONDS))))
+        except (TypeError, ValueError):
+            pass
         for entry in conf.get('services', []):
             if not isinstance(entry, dict) or not entry.get('id'):
                 continue
@@ -407,11 +431,28 @@ class History(QObject):
 
     @Slot(result=unicode)
     def list(self):
-        rows = self.db.execute('SELECT c.id, c.title, c.updated, c.provider, '
-                               '(SELECT COUNT(*) FROM msg m WHERE m.conv=c.id) '
-                               'FROM conv c ORDER BY c.updated DESC LIMIT 200').fetchall()
+        return self.search(u'')
+
+    @Slot(unicode, result=unicode)
+    def search(self, pattern):
+        """Conversations whose title or any message matches the pattern:
+        * = any text, ? = one character; without them the words are looked
+        for anywhere. Letter case and Polish (and other) accents are ignored,
+        so "zolw" finds "żółw"."""
+        pattern = fold(pattern.strip())
+        if not pattern:
+            rows = self.db.execute('SELECT c.id, c.title, c.updated, c.provider '
+                                   'FROM conv c ORDER BY c.updated DESC LIMIT 200').fetchall()
+        else:
+            rx = re.compile(re.escape(pattern).replace('\\*', '.*').replace('\\?', '.'),
+                            re.UNICODE | re.DOTALL)
+            self.db.create_function('hal_match', 1, lambda t: t is not None and rx.search(fold(t)) is not None)
+            rows = self.db.execute('SELECT c.id, c.title, c.updated, c.provider FROM conv c '
+                                   'WHERE hal_match(c.title) OR EXISTS (SELECT 1 FROM msg m '
+                                   'WHERE m.conv=c.id AND hal_match(m.text)) '
+                                   'ORDER BY c.updated DESC LIMIT 200').fetchall()
         return unicode(json.dumps([{'id': r[0], 'title': r[1], 'updated': r[2],
-                                    'provider': r[3], 'count': r[4]} for r in rows]))
+                                    'provider': r[3]} for r in rows]))
 
     def add(self, conv, role, text, provider=u'', model=u''):
         now = time.time()
@@ -454,6 +495,12 @@ class History(QObject):
         except (IOError, OSError), e:
             print 'hal2027: export failed:', e
             return u''
+
+
+def fold(text):
+    """Lower case without accents, for searching (ł has no decomposition)."""
+    text = unicodedata.normalize('NFKD', unicode(text).lower().replace(u'\u0142', u'l'))
+    return u''.join(c for c in text if not unicodedata.combining(c))
 
 
 def sse_lines(buf, chunk):
@@ -927,6 +974,263 @@ class Speech(QObject):
             self.proc = None
 
 
+class Listener(QObject):
+    """Voice input. hal2027-rec records the microphone (PulseAudio) into a
+    WAV file; then the recording goes to the speech-to-text services in
+    the SPEECH_TO_TEXT order until one returns text. Events for QML (take()):
+      level {value 0..1, seconds}, transcribing {service}, fallback {service},
+      text {text, service}, error {code: mic | nokey | api | short, message}."""
+
+    # not 'event': that name would hide QObject.event(), which Qt calls
+    # when the recorder process (a child object) is added or removed
+    news = Signal()
+
+    def __init__(self, net, store):
+        QObject.__init__(self)
+        self.net = net
+        self.store = store
+        self.proc = None
+        self.job = 0
+        self.events = []
+        self.wav = os.path.join(CACHE_DIR, 'mowa.wav')
+
+    def push(self, ev):
+        self.events.append(ev)
+        self.news.emit()
+
+    @Slot(result=unicode)
+    def take(self):
+        if not self.events:
+            return u''
+        return unicode(json.dumps(self.events.pop(0)))
+
+    @Slot(result=int)
+    def maxSeconds(self):
+        return LISTEN_MAX_SECONDS
+
+    def services(self):
+        out = []
+        for e in SPEECH_TO_TEXT:
+            key = self.store.key(e.get('key', e['id']))
+            base = e.get('base') or PROVIDER.get(e.get('key', e['id']), {}).get('base')
+            if key and base:
+                out.append((e, key, base))
+        return out
+
+    @Slot(result=bool)
+    def available(self):
+        return len(self.services()) > 0
+
+    @Slot(unicode)
+    def record(self, lang):
+        """Starts recording; lang is the expected language (pl, en...)."""
+        self.drop()
+        if not self.services():
+            self.push({'type': 'error', 'code': 'nokey'})
+            return
+        ensure_dir(CACHE_DIR)
+        if os.path.exists(self.wav):
+            os.remove(self.wav)
+        self.job += 1
+        job = self.job
+        self.lang = lang
+        proc = QProcess(self)
+        self.proc = proc
+        state = {'error': u'', 'seconds': 0.0, 'buf': ''}
+
+        def ready():
+            state['buf'] += str(proc.readAllStandardOutput())
+            lines = state['buf'].split('\n')
+            state['buf'] = lines.pop()
+            level = None
+            for line in lines:
+                if line.startswith('level '):
+                    try:
+                        level = int(line.split()[1]) / 100.0
+                    except ValueError:
+                        pass
+                    state['seconds'] += 0.1
+                elif line.startswith('error '):
+                    state['error'] = unicode(line[6:], 'utf-8', 'replace')
+                elif line.startswith('done '):
+                    try:
+                        state['seconds'] = float(line.split()[1])
+                    except ValueError:
+                        pass
+            if level is not None and job == self.job:
+                self.push({'type': 'level', 'value': level, 'seconds': state['seconds']})
+
+        def finished(*args):
+            ready()
+            if self.proc is proc:
+                self.proc = None
+            proc.deleteLater()
+            if job != self.job:
+                return
+            if state['error'] or not os.path.exists(self.wav):
+                print 'hal2027: recording failed: %s' % state['error'].encode('utf-8')
+                self.push({'type': 'error', 'code': 'mic', 'message': state['error'] or u'no recording'})
+                return
+            if state['seconds'] < 0.6:
+                self.push({'type': 'error', 'code': 'short'})
+                return
+            self.sent = time.time()
+            self.transcribe(job, self.services(), 0)
+
+        proc.readyReadStandardOutput.connect(lambda: ready())
+        proc.finished.connect(lambda *a: finished(*a))
+        proc.start(REC, [self.wav, str(LISTEN_MAX_SECONDS)])
+        if not proc.waitForStarted(3000):
+            self.proc = None
+            self.push({'type': 'error', 'code': 'mic', 'message': u'hal2027-rec did not start'})
+
+    @Slot()
+    def finish(self):
+        """Ends recording and sends it to be written down."""
+        proc = self.proc
+        if not proc:
+            return
+        proc.write('q\n')         # the recorder stops on any input line
+        proc.terminate()
+        # the WAV header is kept valid while recording, so a recorder that
+        # does not stop in time can simply be killed
+        timer = QTimer(self)
+        timer.setSingleShot(True)
+
+        def late():
+            timer.deleteLater()
+            if proc is self.proc:
+                print 'hal2027: recorder did not stop, killing it'
+                proc.kill()
+        timer.timeout.connect(lambda: late())
+        timer.start(1500)
+
+    @Slot()
+    def drop(self):
+        """Drops the recording or the transcription in progress."""
+        self.job += 1
+        if self.proc:
+            self.proc.kill()
+            self.proc = None
+        self.net.cancel('stt')
+
+    def transcribe(self, job, services, n):
+        entry, key, base = services[n]
+        name = PROVIDER.get(entry.get('key', entry['id']), {}).get('short') or \
+            PROVIDER.get(entry.get('key', entry['id']), {}).get('name') or entry['id']
+        self.push({'type': n and 'fallback' or 'transcribing', 'service': name})
+        lang = self.lang or u'pl'
+        if entry['kind'] == 'gemini':
+            models = entry.get('models') or GEMINI_FALLBACK
+            self.stt_gemini(job, services, n, key, base, models, 0, lang, name)
+        else:
+            self.stt_whisper(job, services, n, key, base, entry, lang, name)
+
+    def next_service(self, job, services, n, message):
+        if job != self.job:
+            return
+        if n + 1 < len(services):
+            print 'hal2027: speech to text: %s failed (%s), trying %s' % (
+                services[n][0]['id'], message.encode('utf-8'), services[n + 1][0]['id'])
+            self.transcribe(job, services, n + 1)
+        else:
+            self.push({'type': 'error', 'code': 'api', 'message': message})
+
+    def deliver(self, job, text, name):
+        if job != self.job:
+            return
+        print 'hal2027: speech written down by %s in %.1f s' % (name.encode('utf-8'), time.time() - self.sent)
+        self.push({'type': 'text', 'text': text.strip(), 'service': name})
+
+    def stt_gemini(self, job, services, n, key, base, models, m, lang, name, think_off=True):
+        import base64
+        audio = base64.b64encode(open(self.wav, 'rb').read())
+        prompt = ('Write down exactly what is said in this recording (most likely in the '
+                  'language with code "%s"). Return only the spoken words with normal '
+                  'punctuation, no comments. If nothing is said, return nothing.' % lang)
+        body = {'contents': [{'role': 'user', 'parts': [
+                    {'text': prompt},
+                    {'inline_data': {'mime_type': 'audio/wav', 'data': audio}}]}],
+                'generationConfig': {'temperature': 0}}
+        if think_off:       # writing down needs no thinking, and thinking takes seconds
+            body['generationConfig']['thinkingConfig'] = {'thinkingBudget': 0}
+        path = os.path.join(CACHE_DIR, 'stt.json')
+        f = open(path, 'w')
+        try:
+            f.write(json.dumps(body))
+        finally:
+            f.close()
+        url = '%s/models/%s:generateContent' % (base, models[m])
+
+        def done(ok, raw, status):
+            if job != self.job:
+                return
+            text = u''
+            try:
+                j = json.loads(raw)
+                for c in j.get('candidates', []):
+                    for part in c.get('content', {}).get('parts', []):
+                        if part.get('text') and not part.get('thought'):
+                            text += part['text']
+            except ValueError:
+                pass
+            if ok and text.strip():
+                self.deliver(job, text, name)
+            elif ok:
+                self.push({'type': 'error', 'code': 'empty'})
+            elif status == 400 and think_off:
+                # a model that cannot switch thinking off: ask again without it
+                self.stt_gemini(job, services, n, key, base, models, m, lang, name, False)
+            elif m + 1 < len(models) and (status in RETRY_STATUS or status == 0):
+                self.stt_gemini(job, services, n, key, base, models, m + 1, lang, name)
+            else:
+                self.next_service(job, services, n, api_error(raw, status))
+
+        self.net.start('stt', url, datafile=path, ctype='application/json',
+                       headers=['x-goog-api-key: ' + key.encode('utf-8')], idle=30, on_done=done)
+
+    def stt_whisper(self, job, services, n, key, base, entry, lang, name):
+        boundary = 'hal2027-%d' % int(time.time() * 1000)
+        fields = [('model', entry.get('model', 'whisper-1')), ('response_format', 'json')]
+        if entry.get('language', True):
+            fields.append(('language', lang))
+        parts = []
+        for k, v in fields:
+            parts.append('--%s\r\nContent-Disposition: form-data; name="%s"\r\n\r\n%s\r\n'
+                         % (boundary, k, v.encode('utf-8') if isinstance(v, unicode) else v))
+        parts.append('--%s\r\nContent-Disposition: form-data; name="file"; filename="mowa.wav"\r\n'
+                     'Content-Type: audio/wav\r\n\r\n' % boundary)
+        path = os.path.join(CACHE_DIR, 'stt.form')
+        f = open(path, 'wb')
+        try:
+            f.write(''.join(parts))
+            f.write(open(self.wav, 'rb').read())
+            f.write('\r\n--%s--\r\n' % boundary)
+        finally:
+            f.close()
+        headers = ['Authorization: Bearer ' + key.encode('utf-8')]
+        headers += [h.encode('utf-8') for h in entry.get('headers', [])]
+
+        def done(ok, raw, status):
+            if job != self.job:
+                return
+            text = u''
+            try:
+                text = json.loads(raw).get('text') or u''
+            except (ValueError, AttributeError):
+                pass
+            if ok and text.strip():
+                self.deliver(job, text, name)
+            elif ok:
+                self.push({'type': 'error', 'code': 'empty'})
+            else:
+                self.next_service(job, services, n, api_error(raw, status))
+
+        self.net.start('stt', base.rstrip('/') + '/audio/transcriptions', datafile=path,
+                       ctype='multipart/form-data; boundary=' + boundary,
+                       headers=headers, idle=30, on_done=done)
+
+
 class Clipboard(QObject):
     @Slot(result=unicode)
     def text(self):
@@ -948,6 +1252,7 @@ def main():
     history = History()
     chat = Chat(net, store, history)
     speech = Speech(net, store)
+    listener = Listener(net, store)
     clipboard = Clipboard()
     ctx = view.rootContext()
     ctx.setContextProperty('uiLang', phone_language())
@@ -957,6 +1262,7 @@ def main():
     ctx.setContextProperty('history', history)
     ctx.setContextProperty('chat', chat)
     ctx.setContextProperty('speech', speech)
+    ctx.setContextProperty('listener', listener)
     ctx.setContextProperty('clipboard', clipboard)
     ctx.setContextProperty('docsDir', DOCS_DIR)
     view.setResizeMode(QDeclarativeView.SizeRootObjectToView)
