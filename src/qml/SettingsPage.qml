@@ -38,11 +38,9 @@ Page {
                 appWindow.showBanner(S.t(uiLang, "modelEmpty"));
                 return;
             }
-            modelsModel.clear();
-            var list = ev.models.slice(0).sort();
-            for (var i = 0; i < list.length; ++i)
-                modelsModel.append({ "name": list[i] });
-            modelDialog.open();
+            var p = pageStack.push(Qt.resolvedUrl("ModelPage.qml"),
+                                   { "models": ev.models.slice(0).sort(), "current": modelField.text });
+            p.picked.connect(function(name) { modelField.text = name; });
         }
     }
 
@@ -424,13 +422,6 @@ Page {
         }
     }
 
-    ListModel { id: modelsModel }
-    SelectionDialog {
-        id: modelDialog
-        titleText: S.t(uiLang, "modelPick")
-        model: modelsModel
-        onAccepted: modelField.text = modelsModel.get(selectedIndex).name
-    }
 
     tools: ToolBarLayout {
         ToolIcon { iconId: "toolbar-back"; onClicked: pageStack.pop() }

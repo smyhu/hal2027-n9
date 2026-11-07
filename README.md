@@ -24,6 +24,8 @@ Designed and written by Claude (Anthropic) together with smyhu.
 - **Conversations:** every session is saved and listed like in a messenger, with date, time and
   the service's mark. Pull the list down at its top to search, the native MeeGo way: `*` stands
   for any text and `?` for one character; letter case and accents are ignored.
+- **Model list:** Settings → Get the model list opens the service's models; pull it down to
+  search the same way (e.g. `free` for OpenRouter's free models).
 - **Reading aloud:** Google voice over Wi-Fi, or **offline** with eSpeak NG (speed and pitch
   adjustable). Auto mode picks one by itself. Auto-reading pauses when the battery is low;
   a mute button is on the toolbar.
@@ -34,11 +36,11 @@ Designed and written by Claude (Anthropic) together with smyhu.
 
 ## Install
 
-Copy `dist/hal2027_0.1.13_armel.deb` to `/home/developer` on the phone (`/tmp` on the N9
+Copy `dist/hal2027_0.1.14_armel.deb` to `/home/developer` on the phone (`/tmp` on the N9
 has only 4 MB), then as root (developer mode):
 
 ```
-aegis-dpkg -i /home/developer/hal2027_0.1.13_armel.deb
+aegis-dpkg -i /home/developer/hal2027_0.1.14_armel.deb
 ```
 
 Requirements: Python 2.6, PySide and Qt Components, all present on a standard PR1.3 phone.
@@ -125,8 +127,8 @@ Zaprojektowany i napisany przez Claude (Anthropic) wspólnie ze smyhu dla Nokii 
 - **Czytanie na głos:** głos Google przez Wi-Fi albo offline (eSpeak NG), z tempem i wysokością.
 - **Tłumacz Google**, pięć kolorów oka, interfejs po polsku i angielsku.
 
-Instalacja: skopiuj `dist/hal2027_0.1.13_armel.deb` do `/home/developer` w telefonie i jako
-root (tryb dewelopera) uruchom `aegis-dpkg -i /home/developer/hal2027_0.1.13_armel.deb`.
+Instalacja: skopiuj `dist/hal2027_0.1.14_armel.deb` do `/home/developer` w telefonie i jako
+root (tryb dewelopera) uruchom `aegis-dpkg -i /home/developer/hal2027_0.1.14_armel.deb`.
 
 Klucze: wpisz w Ustawieniach albo zapisz plik `hal2027-keys.txt` w MyDocs (linie
 `gemini=KLUCZ`) i dotknij Ustawienia → Wczytaj klucze z pliku; HAL zapisze klucze i usunie plik.

@@ -28,7 +28,7 @@ ESPEAK_DATA = os.path.join(APP_DIR, 'espeak', 'espeak-ng-data')
 # both can be changed in Settings
 VOICE_SPEED = 130
 VOICE_PITCH = 25
-VERSION = '0.1.13'
+VERSION = '0.1.14'
 UI_LANGUAGES = ('pl', 'en')
 
 HOME = os.environ.get('HOME') or pwd.getpwuid(os.getuid()).pw_dir
